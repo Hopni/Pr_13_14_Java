@@ -1,0 +1,7 @@
+12345 Ivanov Programing 10 MA 10 DM 10
+43215 Korz Programing 8 MA 9 DM 10
+52415 Korzan Programing 9 MA 10 DM 10
+23151 Lepchuk Programing 10 MA 10 DM 10
+34532 Koval Programing 8 MA 8 DM 10
+43514 Velenko Programing 9 MA 9 DM 10
+13453 Abelenski Programing 10 MA 10 DM 10
