@@ -11,12 +11,12 @@ public class AddingDialog extends JDialog {
     private JTextField studentRecordBookField;
     private JTextField ratingField;
 
-    public AddingDialog(StudentList defaultListModel1, StudentList defaultListModel2){
+    public AddingDialog(MainFrame owner){
         setTitle("Add student");
         setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         pack();
         setLayout(new GridLayout(4, 2));
-        setBounds(500, 200, 400, 350);
+        setBounds(550, 200, 400, 250);
 
         JLabel surnameLabel = new JLabel("Surname");
         JLabel studentRecordBookLabel = new JLabel("Student Record Book");
@@ -33,11 +33,13 @@ public class AddingDialog extends JDialog {
                 if(!surnameField.getText().isEmpty() && !studentRecordBookField.getText().isEmpty() && !ratingField.getText().isEmpty()){
                     try {
                         Student student = new Student(studentRecordBookField.getText() + " " + surnameField.getText() + " " + ratingField.getText());
-                        defaultListModel1.addElement(student);
+                        owner.getModelLeft().addElement(student);
                         if(student.isHighAchiever()){
-                            defaultListModel2.addElement(student);
-                            defaultListModel2.sort();
+                            owner.getModelRight().addElement(student);
+                            owner.getModelRight().sort();
                         }
+                        owner.getStudentsCount().setText("Students " + owner.getModelLeft().getSize());
+                        owner.getHighAchieversCount().setText("High achiever " + owner.getModelRight().getSize());
                         surnameField.setText("");
                         studentRecordBookField.setText("");
                         ratingField.setText("");

@@ -13,9 +13,11 @@ public class StudentList extends DefaultListModel<Student> implements Iterable<S
         }
     }
 
+    private StudentComparator studentComparator = new StudentComparator();
+
     public void sort(){
         ArrayList<Student> list = Collections.list(this.elements());
-        list.sort(new StudentComparator());
+        list.sort(studentComparator);
         this.removeAllElements();
         for(Student s : list){
             this.addElement(s);

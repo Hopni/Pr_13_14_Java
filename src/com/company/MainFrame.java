@@ -1,6 +1,18 @@
 package com.company;
 
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+
 import javax.swing.*;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -8,14 +20,17 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.zip.DataFormatException;
 
 public class MainFrame extends JFrame {
     private JPanel listsPanel;
     private JList leftList, rightList;
-    private StudentComparator studentComparator;
     private StudentList modelLeft, modelRight;
+    private JLabel studentsCount;
+    private JLabel highAchieversCount;
 
     public MainFrame(){
         super("Student List");
@@ -24,17 +39,19 @@ public class MainFrame extends JFrame {
         setLayout(new BorderLayout());
         setBounds(500, 200, 500, 500);
 
-        studentComparator = new StudentComparator();
         createListPanel();
 
         this.add(listsPanel, BorderLayout.CENTER);
         
     }
 
+
     private void createListPanel() {
         JButton openFile = new JButton("Open");
         modelLeft = new StudentList();
         modelRight = new StudentList();
+        studentsCount = new JLabel("Students");
+        highAchieversCount = new JLabel("High achievers");
         openFile.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -42,23 +59,66 @@ public class MainFrame extends JFrame {
                 if (fileChooser.showDialog(null, "Open") == JFileChooser.APPROVE_OPTION) {
                     try {
                         File file = new File(fileChooser.getSelectedFile().getAbsolutePath());
-                        Scanner scanner = new Scanner(file);
-                        while (scanner.hasNextLine()) {
-                            try {
-                                modelLeft.addElement(new Student(scanner.nextLine()));
-                            } catch (DataFormatException dfe) {
-                                JOptionPane.showMessageDialog(null, "Incorrect data");
+                        if (file.getName().substring(file.getName().lastIndexOf(".")).compareTo(".xml") == 0) {
+                            try (StaxStreamProcessor processor = new StaxStreamProcessor(Files.newInputStream(file.toPath()))) {
+                                XMLStreamReader reader = processor.getReader();
+                                while (processor.hasElement()) {
+                                    try {
+                                        modelLeft.addElement(new Student(reader.getElementText()));
+                                    } catch (DataFormatException dfe) {
+                                        JOptionPane.showMessageDialog(null, "Incorrect data");
+                                    }
+                                }
+                            } catch (XMLStreamException | IOException ignored) {
+                                JOptionPane.showMessageDialog(null, "Opening error");
+                            }
+                        } else {
+                            Scanner scanner = new Scanner(file);
+                            while (scanner.hasNextLine()) {
+                                try {
+                                    modelLeft.addElement(new Student(scanner.nextLine()));
+                                } catch (DataFormatException dfe) {
+                                    JOptionPane.showMessageDialog(null, "Incorrect data");
+                                }
                             }
                         }
                     } catch (FileNotFoundException fnfe) {
                         JOptionPane.showMessageDialog(null, "File not found");
                     }
-                    for(Student s : modelLeft){
-                        if(s.isHighAchiever()) {
+                    for (Student s : modelLeft) {
+                        if (s.isHighAchiever()) {
                             modelRight.addElement(s);
                         }
                     }
                     modelRight.sort();
+                    studentsCount.setText("Students " + modelLeft.getSize());
+                    highAchieversCount.setText("High achievers " + modelRight.getSize());
+                }
+            }
+        });
+        JButton saveInFile = new JButton("Save");
+        saveInFile.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JFileChooser fileChooser = new JFileChooser();
+                if (fileChooser.showDialog(null, "Save") == JFileChooser.APPROVE_OPTION) {
+                    try {
+                        File file = new File(fileChooser.getSelectedFile().getAbsolutePath());
+                        Document document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
+                        Element students = document.createElement("students");
+                        document.appendChild(students);
+                        for (Student s : modelLeft) {
+                            Element student = document.createElement("student");
+                            student.setTextContent(s.toXMLString());
+                            students.appendChild(student);
+                        }
+                        Transformer transformer = TransformerFactory.newInstance().newTransformer();
+                        DOMSource source = new DOMSource(document);
+                        StreamResult result = new StreamResult(file);
+                        transformer.transform(source, result);
+                    } catch (ParserConfigurationException | TransformerException ex) {
+                        JOptionPane.showMessageDialog(null, "Writing Error");
+                    }
                 }
             }
         });
@@ -77,10 +137,10 @@ public class MainFrame extends JFrame {
         rightScroller.setPreferredSize(new Dimension(150, 50));
         JPanel leftPanel = new JPanel(new BorderLayout());
         leftPanel.add(leftScroller, BorderLayout.CENTER);
-        leftPanel.add(new JLabel("Student list"), BorderLayout.NORTH);
+        leftPanel.add(studentsCount, BorderLayout.NORTH);
         JPanel rightPanel = new JPanel(new BorderLayout());
         rightPanel.add(rightScroller, BorderLayout.CENTER);
-        rightPanel.add(new JLabel("High achievers"), BorderLayout.NORTH);
+        rightPanel.add(highAchieversCount, BorderLayout.NORTH);
         listsPanel.add(leftPanel, BorderLayout.WEST);
         listsPanel.add(rightPanel, BorderLayout.EAST);
         JTextArea studentInformation = new JTextArea();
@@ -111,17 +171,36 @@ public class MainFrame extends JFrame {
                 }
             }
         });
+        AddingDialog addingDialog = new AddingDialog(this);
         JButton addStudent = new JButton("Add Student");
         addStudent.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                AddingDialog addingDialog = new AddingDialog(modelLeft, modelRight);
                 addingDialog.setVisible(true);
             }
         });
+        JPanel filePanel = new JPanel(new GridLayout(1, 2));
+        filePanel.add(openFile);
+        filePanel.add(saveInFile);
         centerListPanel.add(addStudent, BorderLayout.SOUTH);
-        centerListPanel.add(openFile, BorderLayout.NORTH);
+        centerListPanel.add(filePanel, BorderLayout.NORTH);
         centerListPanel.add(scroll, BorderLayout.CENTER);
+    }
+
+    public StudentList getModelLeft() {
+        return modelLeft;
+    }
+
+    public StudentList getModelRight(){
+        return modelRight;
+    }
+
+    public JLabel getStudentsCount() {
+        return studentsCount;
+    }
+
+    public JLabel getHighAchieversCount() {
+        return highAchieversCount;
     }
 
     public static void main(String[] args) {
