@@ -4,8 +4,11 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
 import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.transform.Transformer;
@@ -20,6 +23,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.*;
@@ -69,6 +73,7 @@ public class MainFrame extends JFrame {
                                         JOptionPane.showMessageDialog(null, "Incorrect data");
                                     }
                                 }
+                                reader.close();
                             } catch (XMLStreamException | IOException ignored) {
                                 JOptionPane.showMessageDialog(null, "Opening error");
                             }
@@ -103,22 +108,30 @@ public class MainFrame extends JFrame {
                 JFileChooser fileChooser = new JFileChooser();
                 if (fileChooser.showDialog(null, "Save") == JFileChooser.APPROVE_OPTION) {
                     try {
-                        File file = new File(fileChooser.getSelectedFile().getAbsolutePath());
-                        Document document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
-                        Element students = document.createElement("students");
-                        document.appendChild(students);
+                        FileWriter file = new FileWriter(fileChooser.getSelectedFile().getAbsolutePath());
+//                        Document document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
+//                        Element students = document.createElement("students");
+//                        document.appendChild(students);
+                        file.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+                        file.write("<students>\n");
                         for (Student s : modelLeft) {
-                            Element student = document.createElement("student");
-                            student.setTextContent(s.toXMLString());
-                            students.appendChild(student);
+                            file.write("<student>");
+                            file.write(s.toXMLString());
+                            file.write("</student>\n");
+//                            Element student = document.createElement("student");
+//                            student.setTextContent(s.toXMLString());
+//                            students.appendChild(student);
                         }
-                        Transformer transformer = TransformerFactory.newInstance().newTransformer();
-                        DOMSource source = new DOMSource(document);
-                        StreamResult result = new StreamResult(file);
-                        transformer.transform(source, result);
-                    } catch (ParserConfigurationException | TransformerException ex) {
-                        JOptionPane.showMessageDialog(null, "Writing Error");
-                    }
+                        file.write("</students>");
+                        file.close();
+//                        Transformer transformer = TransformerFactory.newInstance().newTransformer();
+//                        DOMSource source = new DOMSource(document);
+//                        StreamResult result = new StreamResult(file);
+//                        transformer.transform(source, result);
+                    } catch (IOException ioe){ JOptionPane.showMessageDialog(null, "Writing Error");}
+//                    } catch (ParserConfigurationException | TransformerException ex) {
+//                        JOptionPane.showMessageDialog(null, "Writing Error");
+//                    }
                 }
             }
         });
@@ -147,26 +160,25 @@ public class MainFrame extends JFrame {
         studentInformation.setEditable(false);
         JScrollPane scroll = new JScrollPane(studentInformation);
 
-        leftList.addMouseListener(new MouseAdapter() {
+        leftList.addListSelectionListener(new ListSelectionListener() {
             @Override
-            public void mouseClicked(MouseEvent e) {
-                super.mouseClicked(e);
-                if(!rightList.isSelectionEmpty()) {
+            public void valueChanged(ListSelectionEvent e) {
+                if (!rightList.isSelectionEmpty()) {
                     rightList.clearSelection();
                 }
-                if(!modelLeft.isEmpty() && (modelLeft.get(leftList.getSelectedIndex()) != null)) {
+                if (!modelLeft.isEmpty() && !leftList.isSelectionEmpty() && (modelLeft.get(leftList.getSelectedIndex()) != null)) {
                     studentInformation.setText(modelLeft.get(leftList.getSelectedIndex()).getInformation());
                 }
             }
         });
-        rightList.addMouseListener(new MouseAdapter() {
+
+        rightList.addListSelectionListener(new ListSelectionListener() {
             @Override
-            public void mouseClicked(MouseEvent e) {
-                super.mouseClicked(e);
-                if(!leftList.isSelectionEmpty()){
+            public void valueChanged(ListSelectionEvent e) {
+                if (!leftList.isSelectionEmpty()) {
                     leftList.clearSelection();
                 }
-                if(!modelRight.isEmpty() && (modelRight.get(rightList.getSelectedIndex()) != null)) {
+                if (!modelRight.isEmpty() && !rightList.isSelectionEmpty() && (modelRight.get(rightList.getSelectedIndex()) != null)) {
                     studentInformation.setText(modelRight.get(rightList.getSelectedIndex()).getInformation());
                 }
             }
